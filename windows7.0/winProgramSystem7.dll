@@ -1,0 +1,87 @@
+@echo off
+setlocal enabledelayedexpansion
+
+:: ==============================================================================
+:: WIN7 LEGACY HUB - PRIMARY KERNEL VALIDATOR (.ASI PARENT SYSTEM)
+:: ==============================================================================
+
+:: 1. DEFINIÇÃO DE VARIÁVEIS DE SISTEMA (CAMADAS DE PROTEÇÃO)
+set "SYS_PATH=C:\Windows 7.0"
+set "ENGINE_NAME=core_engine.asi"
+set "CHILD_LOGIC=hub_system.dll"
+set "REG_KEY=HKCU\Software\Win7LegacyHub"
+set "LOG_CHECK=%temp%\sys_validate.tmp"
+
+:: 2. VERIFICAÇÃO INICIAL DO DIRETÓRIO RAIZ
+if not exist "%SYS_PATH%" (
+    set "ERR_CODE=0x001_PATH_NOT_FOUND"
+    goto :system_shutdown
+)
+
+:: 3. VALIDAÇÃO DO "PAI" (.ASI) - CHECAGEM DE ASSINATURA INTERNA
+echo [STATUS] Verificando integridade do Core Engine...
+findstr /c:"SIGNED_BY_ADMIN_HUB_LEGACY_VERSION_7" "%SYS_PATH%\%ENGINE_NAME%" >nul 2>&1
+if %errorlevel% neq 0 (
+    set "ERR_CODE=0x002_INVALID_PARENT_SIGNATURE"
+    goto :system_shutdown
+)
+
+:: 4. VALIDAÇÃO DA "FILHA" (.DLL) - CHECAGEM DE ATRIBUTOS
+attrib "%SYS_PATH%\%CHILD_LOGIC%" | findstr /i "H" >nul
+if %errorlevel% neq 0 (
+    :: Se a DLL não estiver oculta, o sistema entende como violação de segurança, bê!
+    set "ERR_CODE=0x003_DLL_TAMPERING_DETECTED"
+    goto :system_shutdown
+)
+
+:: 5. CONEXÃO COM O REGISTRO DO WINDOWS (A ALMA DO PROGRAMA)
+reg query "%REG_KEY%" /v "KernelID" >nul 2>&1
+if %errorlevel% neq 0 (
+    set "ERR_CODE=0x004_REGISTRY_KEY_MISSING"
+    goto :system_shutdown
+)
+
+:: 6. VERIFICAÇÃO DE HARDWARE (Complexidade Máxima, Brother!)
+echo [STATUS] Sincronizando com o Processador...
+wmic cpu get processorid > "%LOG_CHECK%"
+findstr /v "ProcessorId" "%LOG_CHECK%" >nul
+if %errorlevel% neq 0 (
+    set "ERR_CODE=0x005_HARDWARE_SYNC_FAILED"
+    goto :system_shutdown
+)
+
+:: 7. VERIFICAÇÃO DE DISCO (PROTEÇÃO CONTRA CÓPIA PIRATA)
+vol C: > "%LOG_CHECK%"
+if %errorlevel% neq 0 (
+    set "ERR_CODE=0x006_DISK_SERIAL_UNREADABLE"
+    goto :system_shutdown
+)
+
+:: 8. FINALIZAÇÃO DO BOOT (TUDO OK!)
+del "%LOG_CHECK%"
+cls
+echo.
+echo [92m[SUCCESS] SISTEMA AUTORIZADO PELO NÚCLEO .ASI[0m
+echo [92m[SUCCESS] BEM-VINDO AO WIN7 LEGACY HUB, BROTHER![0m
+timeout /t 2 >nul
+goto :start_main_hub
+
+:system_shutdown
+cls
+color 0C
+echo ╔════════════════════════════════════════════════════════════════════╗
+echo ║             CRITICAL ERROR: SYSTEM ARCHITECTURE COLLAPSE           ║
+echo ╠════════════════════════════════════════════════════════════════════╣
+echo ║ ERRO FATAL: %ERR_CODE%                                 
+echo ║                                                                    ║
+echo ║ O ARQUIVO PAI (.ASI) DETECTOU UMA FALHA NA CONEXÃO COM A DLL OU    ║
+echo ║ NA PASTA "Windows 7.0". O PROCESSO FOI ABORTADO.                   ║
+echo ╚════════════════════════════════════════════════════════════════════╝
+echo.
+echo [!] O Windows 7 impediu a execucao por falta de integridade.
+echo [!] Fale com o desenvolvedor, Brother.
+pause
+exit
+
+:start_main_hub
+:: Aqui entra o seu código principal com o menu e as cores de arco-íris!
